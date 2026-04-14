@@ -1,0 +1,1315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KJMU Analytics Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased h-screen flex overflow-hidden">
+
+    <aside class="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col flex-shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        <div class="h-20 flex items-center px-8 border-b border-slate-100">
+            <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center mr-3 shadow-md shadow-brand-500/30">
+                <i class="fas fa-graduation-cap text-white text-sm"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-900">Rekap<span class="text-brand-500"> KJMU</span></span>
+        </div>
+        <nav class="flex-1 p-5 space-y-2">
+            <p class="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
+            <button onclick="switchTab('overview')" id="nav-desktop-overview" class="w-full flex items-center gap-3 px-4 py-3 bg-brand-50 text-brand-600 rounded-xl text-sm font-semibold transition-all">
+                <i class="fas fa-chart-pie w-5 text-center"></i>
+                Rekap Data
+            </button>
+            <button onclick="switchTab('bnba')" id="nav-desktop-bnba" class="w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-semibold transition-all">
+                <i class="fas fa-table-list w-5 text-center"></i>
+                Data BNBA
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
+        <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-10 flex-shrink-0">
+            <div class="flex items-center justify-between sm:order-2 w-full sm:w-auto">
+                <div id="statusIndicator" class="flex items-center gap-2 text-sm text-amber-600 bg-amber-50 px-3 py-1.5 rounded-full border border-amber-100">
+                    <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                    <span class="font-medium">Connecting database...</span>
+                </div>
+            </div>
+            <div class="sm:order-1 order-last">
+                <h1 id="headerTitle" class="text-2xl font-bold text-slate-800">KJMU Tahap 2 Tahun 2025</h1>
+                <p class="text-sm text-slate-500 mt-1">Rekap penerima KJMU</p>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pb-24 md:pb-8">
+            
+            <div id="overviewSection" class="block animate-[fadeIn_0.4s_ease-out]">
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-6 mb-8">
+                    <div class="col-span-2 md:col-span-1 bg-gradient-to-br from-brand-500 to-brand-700 rounded-2xl p-5 text-white shadow-lg shadow-brand-500/30 flex flex-col justify-center relative overflow-hidden">
+                        <i class="fas fa-users absolute -right-4 -bottom-4 text-7xl text-white/10"></i>
+                        <p class="text-brand-100 text-xs uppercase tracking-wider font-semibold mb-1 relative z-10">Total Penerima</p>
+                        <h3 class="text-4xl font-bold relative z-10" id="totalPenerima">-</h3>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-500 flex-shrink-0">
+                            <i class="fas fa-university text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider font-bold mb-0.5">Total Univ</p>
+                            <h3 class="text-2xl font-bold text-slate-800" id="totalUniv">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                            <i class="fas fa-building-columns text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider font-bold mb-0.5">Total PTN</p>
+                            <h3 class="text-2xl font-bold text-emerald-600" id="totalPTN">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 flex-shrink-0">
+                            <i class="fas fa-city text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider font-bold mb-0.5">Total PTS</p>
+                            <h3 class="text-2xl font-bold text-orange-600" id="totalPTS">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 flex-shrink-0">
+                            <i class="fas fa-forward-step text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider font-bold mb-0.5">Lanjutan</p>
+                            <h3 class="text-2xl font-bold text-brand-600" id="totalLanjutan">-</h3>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center text-purple-500 flex-shrink-0">
+                            <i class="fas fa-user-plus text-xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] sm:text-xs uppercase tracking-wider font-bold mb-0.5">Baru</p>
+                            <h3 class="text-2xl font-bold text-purple-600" id="totalBaru">-</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col hover:shadow-md transition-shadow h-[390px]">
+                        <div class="flex items-center gap-3 mb-6"><div class="w-8 h-8 rounded bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0"><i class="fas fa-chart-pie"></i></div><h3 class="text-base font-bold text-slate-800">Status Perguruan Tinggi</h3></div>
+                        <div class="relative w-full flex justify-center items-center flex-1"><canvas id="statusUnivChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col hover:shadow-md transition-shadow h-[390px]">
+                        <div class="flex items-center gap-3 mb-6"><div class="w-8 h-8 rounded bg-brand-50 text-brand-500 flex items-center justify-center flex-shrink-0"><i class="fas fa-chart-line"></i></div><h3 class="text-base font-bold text-slate-800">Status Penerima KJMU</h3></div>
+                        <div class="relative w-full flex justify-center items-center flex-1"><canvas id="statusPenerimaChart"></canvas></div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col hover:shadow-md transition-shadow h-[390px]">
+                        <div class="flex items-center gap-3 mb-6"><div class="w-8 h-8 rounded bg-purple-50 text-purple-500 flex items-center justify-center flex-shrink-0"><i class="fas fa-venus-mars"></i></div><h3 class="text-base font-bold text-slate-800">Statistik Gender</h3></div>
+                        <div class="relative w-full flex justify-center items-center flex-1"><canvas id="genderChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-6 gap-4 sm:gap-6 mb-6">
+                    <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[440px] hover:shadow-md transition-shadow">
+                        <div class="flex items-center gap-3 mb-4"><div class="w-8 h-8 rounded bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0"><i class="fas fa-map-location-dot"></i></div><h3 class="text-sm font-bold text-slate-800">Wilayah Penerima</h3></div>
+                        <div class="relative w-full flex-1"><canvas id="wilayahChart"></canvas></div>
+                    </div>
+                    <div class="lg:col-span-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[440px]">
+                        <div class="flex items-center gap-2 mb-4 flex-shrink-0"><div class="w-6 h-6 rounded bg-rose-50 text-rose-500 flex items-center justify-center text-xs"><i class="fas fa-list-ol"></i></div><h3 class="text-sm font-bold text-slate-800">Semester</h3></div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100"><table class="w-full text-left text-xs text-slate-600"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold sticky top-0 z-10"><tr><th class="px-4 py-2">Semester</th><th class="px-4 py-2 text-right">Jumlah</th></tr></thead><tbody id="semesterTableBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    </div>
+                    <div class="lg:col-span-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[440px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0"><div class="w-6 h-6 rounded bg-indigo-50 text-indigo-500 flex items-center justify-center text-xs"><i class="fas fa-award"></i></div><h3 class="text-sm font-bold text-slate-800">Sebaran IPK</h3></div>
+                        <div class="bg-indigo-50 rounded-lg p-2 mb-3 text-center border border-indigo-100 flex-shrink-0"><p class="text-[10px] uppercase font-bold text-indigo-400 mb-0.5">Rata-rata IPK</p><p class="text-xl font-bold text-indigo-600 leading-none" id="avgIpkLabel">-</p></div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100"><table class="w-full text-left text-xs text-slate-600"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold sticky top-0 z-10"><tr><th class="px-3 py-3">Rentang IPK</th><th class="px-3 py-3 text-right">Jumlah</th></tr></thead><tbody id="ipkTableBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    </div>
+                    <div class="lg:col-span-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[440px]">
+                        <div class="flex items-center gap-2 mb-4 flex-shrink-0"><div class="w-6 h-6 rounded bg-cyan-50 text-cyan-500 flex items-center justify-center text-xs"><i class="fas fa-user-graduate"></i></div><h3 class="text-sm font-bold text-slate-800">Jenjang</h3></div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100"><table class="w-full text-left text-xs text-slate-600"><thead class="bg-slate-50 text-slate-500 uppercase text-xs font-bold sticky top-0 z-10"><tr><th class="px-4 py-3">Jenjang</th><th class="px-4 py-3 text-right">Jumlah</th></tr></thead><tbody id="jenjangTableBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    </div>
+                    <div class="lg:col-span-1 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[440px]">
+                        <div class="flex items-center gap-2 mb-4 flex-shrink-0"><div class="w-6 h-6 rounded bg-teal-50 text-teal-500 flex items-center justify-center text-xs"><i class="fas fa-school"></i></div><h3 class="text-sm font-bold text-slate-800">Sekolah Asal</h3></div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100"><table class="w-full text-left text-xs text-slate-600"><thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold sticky top-0 z-10"><tr><th class="px-2 py-2">Tingkat</th><th class="px-1 py-2 text-center" title="Negeri">N</th><th class="px-1 py-2 text-center" title="Swasta">S</th><th class="px-2 py-2 text-right">Total</th></tr></thead><tbody id="asalSekolahTableBody" class="divide-y divide-slate-100"></tbody></table></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="bnbaSection" class="hidden animate-[fadeIn_0.3s_ease-out]">
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5 mb-5">
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-rose-50 text-rose-500 flex items-center justify-center text-xs"><i class="fas fa-list-ol"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Jumlah Semester</h3>
+                        </div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold sticky top-0 z-10">
+                                    <tr><th class="px-3 py-2">Semester</th><th class="px-3 py-2 text-right">Jumlah</th></tr>
+                                </thead>
+                                <tbody id="bnba_semesterTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-cyan-50 text-cyan-500 flex items-center justify-center text-xs"><i class="fas fa-user-graduate"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Jumlah Jenjang</h3>
+                        </div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold sticky top-0 z-10">
+                                    <tr><th class="px-3 py-2">Jenjang</th><th class="px-3 py-2 text-right">Jumlah</th></tr>
+                                </thead>
+                                <tbody id="bnba_jenjangTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center justify-between mb-3 flex-shrink-0">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded bg-indigo-50 text-indigo-500 flex items-center justify-center text-xs"><i class="fas fa-award"></i></div>
+                                <h3 class="text-xs sm:text-sm font-bold text-slate-800">Sebaran IPK</h3>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-[8px] uppercase font-bold text-indigo-400 leading-none">Rata-rata</p>
+                                <p class="text-sm font-bold text-indigo-600" id="bnba_avgIpkLabel">-</p>
+                            </div>
+                        </div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100">
+                            <table class="w-full text-left text-[10px] sm:text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[9px] sm:text-[10px] font-bold sticky top-0 z-10">
+                                    <tr><th class="px-2 py-2">Rentang IPK</th><th class="px-2 py-2 text-right">Jml</th></tr>
+                                </thead>
+                                <tbody id="bnba_ipkTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-teal-50 text-teal-500 flex items-center justify-center text-xs"><i class="fas fa-school"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Sekolah Asal</h3>
+                        </div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100">
+                            <table class="w-full text-left text-[10px] text-slate-600">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[9px] font-bold sticky top-0 z-10">
+                                    <tr>
+                                        <th class="px-2 py-2">Tingkat</th><th class="px-1 py-2 text-center" title="Negeri">N</th>
+                                        <th class="px-1 py-2 text-center" title="Swasta">S</th><th class="px-2 py-2 text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bnba_asalSekolahTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-2 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-brand-50 text-brand-500 flex items-center justify-center text-xs"><i class="fas fa-chart-pie"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Status Penerima</h3>
+                        </div>
+                        <div class="relative w-full flex-1 min-h-0">
+                            <canvas id="bnbaStatusChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-2 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-purple-50 text-purple-500 flex items-center justify-center text-xs"><i class="fas fa-venus-mars"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Statistik Gender</h3>
+                        </div>
+                        <div class="relative w-full flex-1 min-h-0">
+                            <canvas id="bnbaGenderChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 mb-5">
+                    
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-indigo-50 text-indigo-500 flex items-center justify-center text-xs"><i class="fas fa-book"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Jumlah Program Studi</h3>
+                        </div>
+                        <div class="overflow-y-auto flex-1 bg-white rounded border border-slate-100">
+                            <table class="w-full text-left text-xs text-slate-600">
+                                <thead class="bg-slate-50 text-slate-500 uppercase text-[10px] font-bold sticky top-0 z-10 shadow-sm select-none">
+                                    <tr>
+                                        <th class="px-3 py-2 border-b border-slate-200">Program Studi</th>
+                                        <th class="px-3 py-2 border-b border-slate-200 text-right cursor-pointer hover:bg-slate-100 transition-colors group" onclick="sortProdiSummary()">
+                                            Jumlah <i class="fas fa-sort-down text-brand-500 ml-1" id="sort_ProdiSummary"></i>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody id="bnba_prodiTableBody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-3 sm:p-4 rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[300px]">
+                        <div class="flex items-center gap-2 mb-3 flex-shrink-0">
+                            <div class="w-6 h-6 rounded bg-amber-50 text-amber-500 flex items-center justify-center text-xs"><i class="fas fa-map-location-dot"></i></div>
+                            <h3 class="text-xs sm:text-sm font-bold text-slate-800">Sebaran Wilayah</h3>
+                        </div>
+                        <div class="relative w-full flex-1 min-h-0 pr-4 sm:pr-8">
+                            <canvas id="bnbaWilayahChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5 mb-5">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                        <h3 class="text-base font-bold text-slate-800"><i class="fas fa-filter text-brand-500 mr-2"></i> Filter Data BNBA</h3>
+                        <div class="bg-brand-50 text-brand-700 px-3 py-1.5 rounded-lg border border-brand-100 font-bold text-xs sm:text-sm">
+                            <span id="filteredCount">0</span> Mahasiswa
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 relative">
+                        <div class="relative" id="wrap_f_univ">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Universitas</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_univ')">
+                                <span id="text_f_univ" class="truncate text-slate-500 pointer-events-none">Semua Universitas</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_univ" class="hidden absolute z-50 left-0 w-[200%] min-w-[280px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_prodi">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Program Studi</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_prodi')">
+                                <span id="text_f_prodi" class="truncate text-slate-500 pointer-events-none">Semua Prodi</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_prodi" class="hidden absolute z-50 left-0 w-[200%] min-w-[280px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_jenjang">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Jenjang</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_jenjang')">
+                                <span id="text_f_jenjang" class="truncate text-slate-500 pointer-events-none">Semua Jenjang</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_jenjang" class="hidden absolute z-50 left-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_semester">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Semester</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_semester')">
+                                <span id="text_f_semester" class="truncate text-slate-500 pointer-events-none">Semua Semester</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_semester" class="hidden absolute z-50 left-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_ipk">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Rentang IPK</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_ipk')">
+                                <span id="text_f_ipk" class="truncate text-slate-500 pointer-events-none">Semua Rentang IPK</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_ipk" class="hidden absolute z-50 right-0 w-[200%] min-w-[240px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_status_univ">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status PT</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_status_univ')">
+                                <span id="text_f_status_univ" class="truncate text-slate-500 pointer-events-none">Semua Status PT</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_status_univ" class="hidden absolute z-50 right-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_status_kjmu">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status KJMU</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_status_kjmu')">
+                                <span id="text_f_status_kjmu" class="truncate text-slate-500 pointer-events-none">Semua Status KJMU</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_status_kjmu" class="hidden absolute z-50 left-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_sekolah">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Sekolah Asal</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_sekolah')">
+                                <span id="text_f_sekolah" class="truncate text-slate-500 pointer-events-none">Semua Sekolah Asal</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_sekolah" class="hidden absolute z-50 left-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_gender">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Gender</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_gender')">
+                                <span id="text_f_gender" class="truncate text-slate-500 pointer-events-none">Semua Gender</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_gender" class="hidden absolute z-50 left-0 w-[200%] min-w-[200px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_wilayah">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Wilayah Asal</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_wilayah')">
+                                <span id="text_f_wilayah" class="truncate text-slate-500 pointer-events-none">Semua Wilayah</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_wilayah" class="hidden absolute z-50 right-0 w-[200%] min-w-[280px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="relative" id="wrap_f_kecamatan">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Kecamatan Asal</label>
+                            <div class="w-full text-xs border border-slate-200 rounded p-1.5 bg-white cursor-pointer flex justify-between items-center hover:border-brand-400" onclick="toggleFilter('f_kecamatan')">
+                                <span id="text_f_kecamatan" class="truncate text-slate-500 pointer-events-none">Semua Kecamatan</span>
+                                <i class="fas fa-chevron-down text-[10px] text-slate-400 pointer-events-none"></i>
+                            </div>
+                            <div id="list_f_kecamatan" class="hidden absolute z-50 right-0 w-[200%] min-w-[280px] mt-1 bg-white border border-slate-200 rounded-lg shadow-xl text-xs flex flex-col"></div>
+                        </div>
+                        <div class="flex items-end">
+                            <button onclick="resetFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold py-1.5 rounded border border-slate-200 transition-colors"><i class="fas fa-rotate-right mr-1"></i> Reset</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[450px]">
+                    <div class="overflow-auto flex-1 bg-slate-50/30">
+                        <table class="w-full text-left text-xs sm:text-sm text-slate-600 min-w-[900px] relative">
+                            <thead class="bg-white text-slate-500 uppercase text-[10px] sm:text-xs font-bold tracking-wider sticky top-0 z-10 shadow-sm select-none">
+                                <tr>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('Nama')">
+                                        <div class="flex items-center gap-2 justify-between">Nama Lengkap <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_Nama"></i></div>
+                                    </th>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('Universitas')">
+                                        <div class="flex items-center gap-2 justify-between">Universitas <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_Universitas"></i></div>
+                                    </th>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('Prodi')">
+                                        <div class="flex items-center gap-2 justify-between">Program Studi <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_Prodi"></i></div>
+                                    </th>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('Semester')">
+                                        <div class="flex items-center gap-2 justify-center">Semester <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_Semester"></i></div>
+                                    </th>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('IPK')">
+                                        <div class="flex items-center gap-2 justify-center">IPK <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_IPK"></i></div>
+                                    </th>
+                                    <th class="px-5 py-3 whitespace-nowrap border-b border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors group" onclick="sortBy('Jenjang')">
+                                        <div class="flex items-center gap-2 justify-center">Jenjang <i class="fas fa-sort text-slate-300 group-hover:text-slate-400" id="sort_Jenjang"></i></div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableBodyBnba" class="divide-y divide-slate-100 bg-white">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-slate-50">
+                        <button id="btnPrev" onclick="loadBnbaData(currentBnbaPage - 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600"><i class="fas fa-chevron-left mr-1"></i> Prev</button>
+                        <span class="text-xs font-medium text-slate-500">Hal <span id="pageIndicator" class="font-bold text-slate-800">1</span> dari <span id="totalPages" class="font-bold text-slate-800">1</span></span>
+                        <button id="btnNext" onclick="loadBnbaData(currentBnbaPage + 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600">Next <i class="fas fa-chevron-right ml-1"></i></button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-slate-200 flex justify-around z-20 pb-safe shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
+            <button onclick="switchTab('overview')" id="nav-mobile-overview" class="flex-1 py-3 flex flex-col items-center gap-1.5 text-brand-600 transition-colors">
+                <i class="fas fa-chart-pie text-lg"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Overview</span>
+            </button>
+            <button onclick="switchTab('bnba')" id="nav-mobile-bnba" class="flex-1 py-3 flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fas fa-table-list text-lg"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">BNBA</span>
+            </button>
+        </nav>
+    </main>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        const supabaseUrl = 'https://tgifmlbhoujddvgwnwqu.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRnaWZtbGJob3VqZGR2Z3dud3F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MjY1MzYsImV4cCI6MjA5MTUwMjUzNn0.rVl57vmV2qKxmcFRz4XVJ-UkN-GbVEPgDp9L2gxaoq0';
+        
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        Chart.register(ChartDataLabels);
+        Chart.defaults.font.family = "'Inter', sans-serif";
+
+        window.currentBnbaPage = 1;
+        window.sortColumn = 'Nama'; 
+        window.sortAsc = true;
+        
+        window.currentProdiSummaryData = [];
+        window.prodiSummarySortAsc = false; // Descending by default for "Jumlah"
+
+        window.filterMap = {
+            'f_univ': 'Universitas', 'f_prodi': 'Prodi', 'f_jenjang': 'Jenjang', 'f_semester': 'Semester',
+            'f_ipk': 'ipk', 'f_status_univ': 'Status Universitas', 'f_status_kjmu': 'Status KJMU',
+            'f_sekolah': 'sekolah', 'f_gender': 'Jenis Kelamin', 'f_wilayah': 'Wilayah Asal', 'f_kecamatan': 'Kecamatan Asal'
+        };
+
+        window.dropdownLabels = {
+            'f_univ': 'Semua Universitas', 'f_prodi': 'Semua Prodi', 'f_jenjang': 'Semua Jenjang', 'f_semester': 'Semua Semester',
+            'f_ipk': 'Semua Rentang IPK', 'f_status_univ': 'Semua Status PT', 'f_status_kjmu': 'Semua Status KJMU', 
+            'f_sekolah': 'Semua Sekolah Asal', 'f_gender': 'Semua Gender', 'f_wilayah': 'Semua Wilayah', 'f_kecamatan': 'Semua Kecamatan'
+        };
+
+        window.filterState = {};
+        for(let key in window.filterMap) window.filterState[key] = [];
+
+        window.switchTab = function(tab) {
+            document.getElementById('overviewSection').classList.add('hidden');
+            document.getElementById('bnbaSection').classList.add('hidden');
+
+            document.getElementById('nav-desktop-overview').className = "w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-semibold transition-all";
+            document.getElementById('nav-desktop-bnba').className = "w-full flex items-center gap-3 px-4 py-3 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-xl text-sm font-semibold transition-all";
+            document.getElementById('nav-mobile-overview').className = "flex-1 py-3 flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors";
+            document.getElementById('nav-mobile-bnba').className = "flex-1 py-3 flex flex-col items-center gap-1.5 text-slate-400 hover:text-slate-600 transition-colors";
+
+            if(tab === 'overview') {
+                document.getElementById('overviewSection').classList.remove('hidden');
+                document.getElementById('nav-desktop-overview').className = "w-full flex items-center gap-3 px-4 py-3 bg-brand-50 text-brand-600 rounded-xl text-sm font-semibold transition-all";
+                document.getElementById('nav-mobile-overview').className = "flex-1 py-3 flex flex-col items-center gap-1.5 text-brand-600 transition-colors";
+            } else if(tab === 'bnba') {
+                document.getElementById('bnbaSection').classList.remove('hidden');
+                document.getElementById('nav-desktop-bnba').className = "w-full flex items-center gap-3 px-4 py-3 bg-brand-50 text-brand-600 rounded-xl text-sm font-semibold transition-all";
+                document.getElementById('nav-mobile-bnba').className = "flex-1 py-3 flex flex-col items-center gap-1.5 text-brand-600 transition-colors";
+            }
+        }
+
+        window.animateValue = function(id, start, end, duration) {
+            let obj = document.getElementById(id);
+            if (!obj) return;
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+                if (progress < 1) { window.requestAnimationFrame(step); }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        async function init() {
+            fetchOverviewData();
+            await fetchAllDataLocal(); 
+        }
+
+        async function fetchOverviewData() {
+            try {
+                const { data, error } = await supabase.rpc('get_dashboard_summary');
+                if (error) throw error;
+
+                document.getElementById('statusIndicator').innerHTML = `<div class="w-2 h-2 rounded-full bg-emerald-500"></div><span class="font-medium text-emerald-600">Terhubung ke Database</span>`;
+                document.getElementById('statusIndicator').className = "flex items-center gap-2 text-sm text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100";
+
+                animateValue("totalPenerima", 0, data.total_penerima || 0, 800);
+                document.getElementById('totalUniv').innerText = data.total_univ?.toLocaleString() || '0';
+                document.getElementById('totalPTN').innerText = data.total_ptn?.toLocaleString() || '0';
+                document.getElementById('totalPTS').innerText = data.total_pts?.toLocaleString() || '0';
+                document.getElementById('totalLanjutan').innerText = data.total_lanjutan?.toLocaleString() || '0';
+                document.getElementById('totalBaru').innerText = data.total_baru?.toLocaleString() || '0';
+
+                let cleanStatusPenerima = {};
+                if (data.chart_status_penerima) {
+                    for (let key in data.chart_status_penerima) {
+                        let newKey = key;
+                        if (key.toLowerCase().includes('baru')) newKey = 'Penerima Baru';
+                        if (key.toLowerCase().includes('lanjutan')) newKey = 'Lanjutan';
+                        cleanStatusPenerima[newKey] = (cleanStatusPenerima[newKey] || 0) + data.chart_status_penerima[key];
+                    }
+                }
+
+                renderPieChart('statusUnivChart', data.chart_status_univ, ['#10b981', '#f97316']);
+                renderPieChart('statusPenerimaChart', cleanStatusPenerima, ['#0ea5e9', '#64748b']);
+                renderPieChart('genderChart', data.chart_gender, ['#a855f7', '#ec4899']); 
+                renderBarChart('wilayahChart', data.chart_wilayah, '#0ea5e9'); 
+                
+                document.getElementById('avgIpkLabel').innerText = data.rata_rata_ipk || '-';
+
+                renderSemesterTable(data.tabel_semester);
+                renderIpkTable(data.tabel_ipk);
+                renderJenjangTable(data.tabel_jenjang);
+                renderAsalSekolahTable(data.tabel_asal_sekolah);
+
+            } catch (error) {
+                console.error('Error Overview:', error);
+                document.getElementById('statusIndicator').innerHTML = `<div class="w-2 h-2 rounded-full bg-rose-500"></div><span class="font-medium text-rose-600">Gagal terhubung</span>`;
+                document.getElementById('statusIndicator').className = "flex items-center gap-2 text-sm text-rose-600 bg-rose-50 px-3 py-1.5 rounded-full border border-rose-100";
+            }
+        }
+
+        // ================= SISTEM LOKAL DATA & CASCADING FILTER =================
+
+        let openDropdown = null;
+        let debounceTimer;
+
+        window.toggleFilter = function(id) {
+            if(openDropdown && openDropdown !== id) document.getElementById('list_'+openDropdown).classList.add('hidden');
+            const list = document.getElementById('list_'+id);
+            list.classList.toggle('hidden');
+            openDropdown = list.classList.contains('hidden') ? null : id;
+            
+            if(openDropdown) {
+                const searchBox = list.querySelector('input[type="text"]');
+                if(searchBox) setTimeout(() => searchBox.focus(), 50);
+            }
+        }
+
+        document.addEventListener('click', (e) => {
+            if(openDropdown && !e.target.closest('#wrap_'+openDropdown)) {
+                document.getElementById('list_'+openDropdown).classList.add('hidden');
+                openDropdown = null;
+            }
+        });
+
+        window.filterDropdownOptions = function(input, id) {
+            const filter = input.value.toLowerCase();
+            const labels = document.getElementById('opt_' + id).querySelectorAll('.filter-option');
+            labels.forEach(label => {
+                const text = label.getAttribute('data-text');
+                if (text.indexOf(filter) > -1) label.style.display = "flex";
+                else label.style.display = "none";
+            });
+        }
+
+        window.toggleOption = function(id, val) {
+            const arr = window.filterState[id];
+            const idx = arr.indexOf(val);
+            if(idx > -1) arr.splice(idx, 1);
+            else arr.push(val);
+            
+            updateCascadingDropdowns();
+            loadBnbaData(1);
+        }
+
+        window.resetFilters = function() {
+            for(let key in window.filterState) window.filterState[key] = [];
+            window.sortColumn = 'Nama'; 
+            window.sortAsc = true;
+            document.querySelectorAll('th i.fas').forEach(el => {
+                if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+            });
+            document.getElementById('sort_Nama').className = 'fas fa-sort-up text-brand-500';
+            
+            updateCascadingDropdowns();
+            loadBnbaData(1);
+        }
+
+        window.sortBy = function(col) {
+            if (window.sortColumn === col) {
+                window.sortAsc = !window.sortAsc; 
+            } else {
+                window.sortColumn = col;
+                window.sortAsc = true; 
+            }
+            
+            document.querySelectorAll('th i.fas').forEach(el => {
+                if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+            });
+            
+            const icon = document.getElementById('sort_' + col);
+            if(icon) icon.className = window.sortAsc ? 'fas fa-sort-up text-brand-500' : 'fas fa-sort-down text-brand-500';
+            
+            loadBnbaData(1); 
+        }
+
+        // Sorting Untuk Tabel Prodi BNBA
+        window.sortProdiSummary = function() {
+            window.prodiSummarySortAsc = !window.prodiSummarySortAsc;
+            window.renderProdiSummaryTable();
+        }
+
+        async function fetchAllDataLocal() {
+            try {
+                document.getElementById('tableBodyBnba').innerHTML = '<tr><td colspan="6" class="px-5 py-16 text-center text-brand-500"><i class="fas fa-spinner fa-spin text-4xl mb-4"></i><br><span class="font-bold text-slate-800 text-lg">Mengunduh Database...</span><br><span class="text-sm text-slate-500 mt-2 block">Menyiapkan fitur filter & sorting super cepat</span></td></tr>';
+                
+                const { count, error } = await supabase.from('kjmu2025').select('*', { count: 'exact', head: true });
+                if (error || !count) throw error || "No data";
+                
+                const pageSize = 1000;
+                const requests = [];
+                for (let i = 0; i < count; i += pageSize) {
+                    requests.push(supabase.from('kjmu2025').select('No, Nama, Universitas, Prodi, Jenjang, Semester, "Status Universitas", "Status KJMU", "Jenis Kelamin", "Wilayah Asal", "Kecamatan Asal", TINGKAT_SEKOLAH, IPK').range(i, i + pageSize - 1));
+                }
+                
+                const responses = await Promise.all(requests);
+                let allRows = [];
+                responses.forEach(res => { if(res.data) allRows.push(...res.data); });
+                
+                window.allData = allRows;
+                updateCascadingDropdowns();
+                
+                const icon = document.getElementById('sort_' + window.sortColumn);
+                if(icon) icon.className = 'fas fa-sort-up text-brand-500';
+                
+                loadBnbaData(1); 
+            } catch (err) {
+                console.error("Gagal memuat seluruh data", err);
+                document.getElementById('tableBodyBnba').innerHTML = '<tr><td colspan="6" class="px-5 py-10 text-center text-rose-500">Terjadi kesalahan saat mengunduh data.</td></tr>';
+            }
+        }
+
+        function updateCascadingDropdowns() {
+            if(!window.allData) return;
+            
+            for (const id in window.filterMap) {
+                const field = window.filterMap[id];
+                const defaultText = window.dropdownLabels[id];
+                const selectedArr = window.filterState[id];
+                
+                const opts = getUniqueOptions(field, window.filterState);
+                const listEl = document.getElementById('list_'+id);
+                
+                let currentSearch = '';
+                const oldSearchBox = listEl.querySelector('input[type="text"]');
+                if(oldSearchBox) currentSearch = oldSearchBox.value;
+
+                let currentScroll = 0;
+                const oldOptContainer = document.getElementById('opt_' + id);
+                if (oldOptContainer) currentScroll = oldOptContainer.scrollTop;
+                
+                listEl.innerHTML = '';
+                
+                if(opts.length === 0) {
+                    listEl.innerHTML = `<div class="p-3 text-slate-400 italic text-center">Data tidak ditemukan</div>`;
+                } else {
+                    let html = `
+                        <div class="p-2 border-b border-slate-100 bg-slate-50 sticky top-0 z-10 flex-shrink-0">
+                            <div class="relative">
+                                <i class="fas fa-search absolute left-2.5 top-2.5 text-slate-400 text-[10px]"></i>
+                                <input type="text" placeholder="Cari..." value="${currentSearch}"
+                                       class="w-full pl-7 pr-2 py-1.5 text-xs border border-slate-200 rounded focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                                       onkeyup="filterDropdownOptions(this, '${id}')"
+                                       onclick="event.stopPropagation()">
+                            </div>
+                        </div>
+                        <div id="opt_${id}" class="max-h-48 overflow-y-auto p-1.5 flex-1">
+                    `;
+                    
+                    opts.forEach(opt => {
+                        const isChecked = selectedArr.includes(opt);
+                        const labelText = opt; 
+                        const safeOpt = opt.replace(/'/g, "\\'");
+                        const searchText = String(opt).toLowerCase().replace(/"/g, "&quot;");
+                        
+                        html += `
+                            <label class="flex items-start gap-2.5 p-2 hover:bg-slate-50 cursor-pointer rounded filter-option" data-text="${searchText}">
+                                <input type="checkbox" class="mt-[3px] w-3.5 h-3.5 rounded border-slate-300 accent-[#0ea5e9] cursor-pointer flex-shrink-0" 
+                                       ${isChecked ? 'checked' : ''} 
+                                       onchange="toggleOption('${id}', '${safeOpt}')">
+                                <span class="text-slate-700 leading-tight whitespace-normal">${labelText}</span>
+                            </label>
+                        `;
+                    });
+                    
+                    html += `</div>`;
+                    listEl.innerHTML = html;
+                    
+                    const newSearchBox = listEl.querySelector('input[type="text"]');
+                    if(newSearchBox && currentSearch) {
+                        filterDropdownOptions(newSearchBox, id);
+                        if(openDropdown === id) setTimeout(() => newSearchBox.focus(), 0);
+                    }
+
+                    const newOptContainer = document.getElementById('opt_' + id);
+                    if (newOptContainer) newOptContainer.scrollTop = currentScroll;
+                }
+
+                const textEl = document.getElementById('text_'+id);
+                if(selectedArr.length === 0) {
+                    textEl.textContent = defaultText;
+                    textEl.className = "truncate text-slate-500 pointer-events-none";
+                } else if (selectedArr.length === 1) {
+                    textEl.textContent = selectedArr[0];
+                    textEl.className = "truncate text-slate-800 font-bold pointer-events-none";
+                } else {
+                    textEl.textContent = `${selectedArr.length} Pilihan Aktif`;
+                    textEl.className = "truncate text-brand-600 font-bold pointer-events-none";
+                }
+            }
+        }
+
+        function getUniqueOptions(targetField, currentFilters) {
+            const filteredData = window.allData.filter(row => {
+                for (const key in currentFilters) {
+                    if (window.filterMap[key] === targetField) continue;
+                    
+                    const filterArr = currentFilters[key];
+                    if (filterArr.length === 0) continue;
+                    
+                    let match = false;
+                    for (const filterValue of filterArr) {
+                        if (key === 'f_sekolah') {
+                            if (row['TINGKAT_SEKOLAH'] && String(row['TINGKAT_SEKOLAH']).toUpperCase().startsWith(filterValue)) match = true;
+                        } else if (key === 'f_ipk') {
+                            let ipk = parseFloat(row.IPK);
+                            if (isNaN(ipk)) ipk = 0;
+                            if (filterValue === '< 2.75 (Selain 0)' && ipk > 0 && ipk < 2.75) match = true;
+                            else if (filterValue === '< 2.75 (Termasuk 0)' && ipk < 2.75) match = true;
+                            else if (filterValue === '2.75-3.00' && ipk >= 2.75 && ipk <= 3.00) match = true;
+                            else if (filterValue === '3.01-3.25' && ipk >= 3.01 && ipk <= 3.25) match = true;
+                            else if (filterValue === '3.26-3.50' && ipk >= 3.26 && ipk <= 3.50) match = true;
+                            else if (filterValue === '3.51-3.75' && ipk >= 3.51 && ipk <= 3.75) match = true;
+                            else if (filterValue === '> 3.75' && ipk > 3.75) match = true;
+                        } else {
+                            let rowVal = row[window.filterMap[key]];
+                            if (window.filterMap[key] === 'Semester' && rowVal) rowVal = String(rowVal);
+                            if (rowVal === filterValue) match = true;
+                        }
+                    }
+                    if (!match) return false;
+                }
+                return true;
+            });
+
+            const unique = new Set();
+            filteredData.forEach(row => {
+                if (targetField === 'sekolah') {
+                    if (row['TINGKAT_SEKOLAH']) {
+                        let t = String(row['TINGKAT_SEKOLAH']).toUpperCase();
+                        if (t.startsWith('SMA')) unique.add('SMA');
+                        else if (t.startsWith('SMK')) unique.add('SMK');
+                        else if (t.startsWith('MA')) unique.add('MA');
+                        else if (t.startsWith('PKBM')) unique.add('PKBM');
+                    }
+                } else if (targetField === 'ipk') {
+                     let ipk = parseFloat(row.IPK);
+                     if (isNaN(ipk)) ipk = 0;
+                     if (ipk > 0 && ipk < 2.75) unique.add('< 2.75 (Selain 0)');
+                     if (ipk < 2.75) unique.add('< 2.75 (Termasuk 0)');
+                     if (ipk >= 2.75 && ipk <= 3.00) unique.add('2.75-3.00');
+                     if (ipk >= 3.01 && ipk <= 3.25) unique.add('3.01-3.25');
+                     if (ipk >= 3.26 && ipk <= 3.50) unique.add('3.26-3.50');
+                     if (ipk >= 3.51 && ipk <= 3.75) unique.add('3.51-3.75');
+                     if (ipk > 3.75) unique.add('> 3.75');
+                } else {
+                    let val = row[targetField];
+                    if (targetField === 'Semester' && val) val = String(val);
+                    if (val !== null && val !== undefined && val !== '') unique.add(val);
+                }
+            });
+
+            let result = [...unique];
+            if (targetField === 'ipk') {
+                const order = ['< 2.75 (Selain 0)', '< 2.75 (Termasuk 0)', '2.75-3.00', '3.01-3.25', '3.26-3.50', '3.51-3.75', '> 3.75'];
+                result = result.filter(v => order.includes(v)); 
+                result.sort((a,b) => order.indexOf(a) - order.indexOf(b));
+            } else if (targetField === 'Semester') {
+                result.sort((a,b) => parseInt(a) - parseInt(b));
+            } else {
+                result.sort();
+            }
+            return result;
+        }
+
+        window.loadBnbaData = function(page = 1) {
+            window.currentBnbaPage = page;
+            const itemsPerPage = 10;
+            
+            if(!window.allData || window.allData.length === 0) return;
+
+            let filtered = window.allData.filter(row => {
+                const valArr = (id) => window.filterState[id];
+                
+                const checkIn = (id, key) => {
+                    const arr = valArr(id);
+                    if (arr.length === 0) return true;
+                    return arr.includes(row[key]);
+                };
+                
+                if (!checkIn('f_univ', 'Universitas')) return false;
+                if (!checkIn('f_prodi', 'Prodi')) return false;
+                if (!checkIn('f_jenjang', 'Jenjang')) return false;
+                
+                const semArr = valArr('f_semester');
+                if (semArr.length > 0 && !semArr.includes(String(row['Semester']))) return false;
+                
+                if (!checkIn('f_status_univ', 'Status Universitas')) return false;
+                if (!checkIn('f_status_kjmu', 'Status KJMU')) return false;
+                if (!checkIn('f_gender', 'Jenis Kelamin')) return false;
+                if (!checkIn('f_wilayah', 'Wilayah Asal')) return false;
+                if (!checkIn('f_kecamatan', 'Kecamatan Asal')) return false;
+                
+                const sekolahArr = valArr('f_sekolah');
+                if (sekolahArr.length > 0) {
+                    let sMatch = false;
+                    let ts = String(row['TINGKAT_SEKOLAH'] || '').toUpperCase();
+                    sekolahArr.forEach(s => {
+                        if (ts.startsWith(s)) sMatch = true;
+                    });
+                    if (!sMatch) return false;
+                }
+                
+                const ipkArr = valArr('f_ipk');
+                if (ipkArr.length > 0) {
+                    let iMatch = false;
+                    let ipk = parseFloat(row.IPK);
+                    if (isNaN(ipk)) ipk = 0;
+                    ipkArr.forEach(ipkVal => {
+                        if (ipkVal === '< 2.75 (Selain 0)' && ipk > 0 && ipk < 2.75) iMatch = true;
+                        else if (ipkVal === '< 2.75 (Termasuk 0)' && ipk < 2.75) iMatch = true;
+                        else if (ipkVal === '2.75-3.00' && ipk >= 2.75 && ipk <= 3.00) iMatch = true;
+                        else if (ipkVal === '3.01-3.25' && ipk >= 3.01 && ipk <= 3.25) iMatch = true;
+                        else if (ipkVal === '3.26-3.50' && ipk >= 3.26 && ipk <= 3.50) iMatch = true;
+                        else if (ipkVal === '3.51-3.75' && ipk >= 3.51 && ipk <= 3.75) iMatch = true;
+                        else if (ipkVal === '> 3.75' && ipk > 3.75) iMatch = true;
+                    });
+                    if (!iMatch) return false;
+                }
+                return true;
+            });
+            
+            renderBnbaSummary(filtered);
+
+            if (window.sortColumn) {
+                filtered.sort((a, b) => {
+                    let valA = a[window.sortColumn];
+                    let valB = b[window.sortColumn];
+                    
+                    if (window.sortColumn === 'IPK' || window.sortColumn === 'Semester') {
+                        valA = parseFloat(valA); if(isNaN(valA)) valA = 0;
+                        valB = parseFloat(valB); if(isNaN(valB)) valB = 0;
+                        return window.sortAsc ? valA - valB : valB - valA;
+                    } else {
+                        valA = String(valA || '').toLowerCase();
+                        valB = String(valB || '').toLowerCase();
+                        if (valA < valB) return window.sortAsc ? -1 : 1;
+                        if (valA > valB) return window.sortAsc ? 1 : -1;
+                        return 0;
+                    }
+                });
+            }
+            
+            const count = filtered.length;
+            document.getElementById('filteredCount').innerText = count.toLocaleString();
+            
+            const totalPages = Math.ceil(count / itemsPerPage) || 1;
+            if (page > totalPages) page = totalPages; 
+            window.currentBnbaPage = page;
+            
+            document.getElementById('pageIndicator').innerText = page;
+            document.getElementById('totalPages').innerText = totalPages;
+            
+            document.getElementById('btnPrev').disabled = (page === 1);
+            document.getElementById('btnNext').disabled = (page === totalPages);
+            
+            const from = (page - 1) * itemsPerPage;
+            const to = from + itemsPerPage;
+            const pagedRows = filtered.slice(from, to); 
+            
+            renderBnbaTable(pagedRows);
+        }
+
+        // ================= FUNGSI RENDER WIDGET SUMMARY KHUSUS BNBA =================
+        function renderBnbaSummary(data) {
+            let semCount = {};
+            let jenjangCount = {};
+            let ipkRanges = {'< 2.75':0, '2.75-3.00':0, '3.01-3.25':0, '3.26-3.50':0, '3.51-3.75':0, '> 3.75':0};
+            let sumIpk = 0; let countIpk = 0;
+            let sekolahCount = {};
+            let statusCount = {'Lanjutan': 0, 'Penerima Baru': 0};
+            let genderCount = {'Laki-Laki': 0, 'Perempuan': 0};
+            
+            // Variabel Tambahan Untuk Baris Ke-2 BNBA
+            let prodiCount = {};
+            let wilayahCount = {};
+
+            data.forEach(row => {
+                let s = row.Semester; if(s) semCount[s] = (semCount[s] || 0) + 1;
+                let j = row.Jenjang; if(j) jenjangCount[j] = (jenjangCount[j] || 0) + 1;
+                let p = row.Prodi; if(p) prodiCount[p] = (prodiCount[p] || 0) + 1;
+                let w = row['Wilayah Asal']; if(w) wilayahCount[w] = (wilayahCount[w] || 0) + 1;
+                
+                let ipk = parseFloat(row.IPK);
+                if(!isNaN(ipk)) {
+                    if(ipk > 0) { sumIpk += ipk; countIpk++; }
+                    if(ipk < 2.75) ipkRanges['< 2.75']++;
+                    else if(ipk <= 3.00) ipkRanges['2.75-3.00']++;
+                    else if(ipk <= 3.25) ipkRanges['3.01-3.25']++;
+                    else if(ipk <= 3.50) ipkRanges['3.26-3.50']++;
+                    else if(ipk <= 3.75) ipkRanges['3.51-3.75']++;
+                    else ipkRanges['> 3.75']++;
+                }
+
+                let ts = String(row.TINGKAT_SEKOLAH||'').toUpperCase();
+                let cat = ts.startsWith('SMA') ? 'SMA' : (ts.startsWith('SMK') ? 'SMK' : (ts.startsWith('MA') ? 'MA' : (ts.startsWith('PKBM') ? 'PKBM' : null)));
+                if(cat) {
+                    if(!sekolahCount[cat]) sekolahCount[cat] = {N:0, S:0};
+                    let isN = ts.endsWith('N'); 
+                    let isS = ts.endsWith('S');
+                    if(isN) sekolahCount[cat].N++;
+                    else if(isS) sekolahCount[cat].S++;
+                    else sekolahCount[cat].S++; 
+                }
+
+                let sk = row['Status KJMU'];
+                if(sk) {
+                    if(sk.toLowerCase().includes('lanjutan')) statusCount['Lanjutan']++;
+                    else statusCount['Penerima Baru']++;
+                }
+
+                let jk = row['Jenis Kelamin'];
+                if(jk) {
+                    if(jk.toLowerCase() === 'laki-laki') genderCount['Laki-Laki']++;
+                    else if(jk.toLowerCase() === 'perempuan') genderCount['Perempuan']++;
+                }
+            });
+
+            // 1. Semester
+            const tbSem = document.getElementById('bnba_semesterTableBody');
+            tbSem.innerHTML = '';
+            Object.keys(semCount).sort((a,b)=>parseInt(a)-parseInt(b)).forEach(k => {
+                tbSem.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-3 py-1.5 border-b border-slate-50 font-bold text-slate-700 text-[11px]">Smt ${k}</td><td class="px-3 py-1.5 border-b border-slate-50 text-right font-medium text-[11px]">${semCount[k].toLocaleString()}</td></tr>`;
+            });
+
+            // 2. Jenjang
+            const tbJen = document.getElementById('bnba_jenjangTableBody');
+            tbJen.innerHTML = '';
+            Object.keys(jenjangCount).sort().forEach(k => {
+                tbJen.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-3 py-1.5 border-b border-slate-50 font-bold text-slate-700 text-[11px]">${k}</td><td class="px-3 py-1.5 border-b border-slate-50 text-right font-medium text-[11px]">${jenjangCount[k].toLocaleString()}</td></tr>`;
+            });
+
+            // 3. IPK
+            let avgIpk = countIpk > 0 ? (sumIpk / countIpk).toFixed(2) : '-';
+            document.getElementById('bnba_avgIpkLabel').innerText = avgIpk;
+            const tbIpk = document.getElementById('bnba_ipkTableBody');
+            tbIpk.innerHTML = '';
+            Object.keys(ipkRanges).forEach(k => {
+                tbIpk.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-2 py-1.5 border-b border-slate-50 font-bold"><span class="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded text-[10px]">${k}</span></td><td class="px-2 py-1.5 border-b border-slate-50 text-right font-medium text-[11px]">${ipkRanges[k].toLocaleString()}</td></tr>`;
+            });
+
+            // 4. Sekolah Asal
+            const tbSek = document.getElementById('bnba_asalSekolahTableBody');
+            tbSek.innerHTML = '';
+            ['SMA', 'SMK', 'MA', 'PKBM'].forEach(cat => {
+                if(sekolahCount[cat]) {
+                    let N = sekolahCount[cat].N; let S = sekolahCount[cat].S; let tot = N+S;
+                    if(tot > 0) {
+                        tbSek.innerHTML += `<tr class="hover:bg-slate-50"><td class="px-2 py-1.5 border-b border-slate-50 font-bold text-slate-700 text-[10px]">${cat}</td><td class="px-1 py-1.5 border-b border-slate-50 text-center font-medium text-emerald-600 text-[10px]">${N.toLocaleString()}</td><td class="px-1 py-1.5 border-b border-slate-50 text-center font-medium text-orange-600 text-[10px]">${S.toLocaleString()}</td><td class="px-2 py-1.5 border-b border-slate-50 text-right font-bold text-slate-800 bg-slate-50/50 text-[10px]">${tot.toLocaleString()}</td></tr>`;
+                    }
+                }
+            });
+
+            // 5 & 6. Donut Charts
+            updateBnbaChart('bnbaStatusChart', statusCount, ['#0ea5e9', '#64748b'], 'bnbaStatusChartInst');
+            updateBnbaChart('bnbaGenderChart', genderCount, ['#a855f7', '#ec4899'], 'bnbaGenderChartInst');
+            
+            // 7. Jumlah Program Studi (Table Bawah)
+            window.currentProdiSummaryData = Object.keys(prodiCount).map(k => ({ prodi: k, count: prodiCount[k] }));
+            window.renderProdiSummaryTable();
+            
+            // 8. Sebaran Wilayah (Bar Chart Bawah)
+            updateBnbaBarChart('bnbaWilayahChart', wilayahCount, '#0ea5e9', 'bnbaWilayahChartInst');
+        }
+
+        // FUNGSI RENDER TABEL PRODI
+        window.renderProdiSummaryTable = function() {
+            const tbody = document.getElementById('bnba_prodiTableBody');
+            const icon = document.getElementById('sort_ProdiSummary');
+            icon.className = window.prodiSummarySortAsc ? 'fas fa-sort-up text-brand-500 ml-1' : 'fas fa-sort-down text-brand-500 ml-1';
+
+            let data = [...window.currentProdiSummaryData];
+            data.sort((a, b) => {
+                return window.prodiSummarySortAsc ? a.count - b.count : b.count - a.count;
+            });
+
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="2" class="px-3 py-4 text-center text-slate-400 text-xs">Tidak ada data</td></tr>`;
+                return;
+            }
+            
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-3 py-2 border-b border-slate-50 font-bold text-slate-700 text-[10px] sm:text-xs">${item.prodi}</td>
+                        <td class="px-3 py-2 border-b border-slate-50 text-right font-medium text-[10px] sm:text-xs">${item.count.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updateBnbaChart(canvasId, dataObj, colors, instName) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const labels = Object.keys(dataObj).filter(k => dataObj[k] > 0);
+            const values = labels.map(k => dataObj[k]);
+            
+            if(window[instName]) {
+                window[instName].data.labels = labels;
+                window[instName].data.datasets[0].data = values;
+                window[instName].update();
+            } else {
+                window[instName] = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1.5, borderColor: '#ffffff' }] },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, cutout: '55%', layout: { padding: 10 },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { usePointStyle: true, padding: 8, font: { size: 10, family: "'Inter', sans-serif" } } },
+                            datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v, ctx) => {
+                                let sum = ctx.dataset.data.reduce((a,b)=>a+b,0);
+                                if(sum === 0) return '';
+                                return (v*100/sum).toFixed(1)+"%";
+                            }}
+                        }
+                    }
+                });
+            }
+        }
+        
+        function updateBnbaBarChart(canvasId, dataObj, barColor, instName) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            // Urutkan nilai terbanyak ke sedikit agar bar chart lebih rapi
+            const sortedEntries = Object.entries(dataObj).sort((a,b) => b[1] - a[1]);
+            const labels = sortedEntries.filter(e => e[1] > 0).map(e => e[0]);
+            const values = sortedEntries.filter(e => e[1] > 0).map(e => e[1]);
+            const total = values.reduce((a, b) => a + b, 0);
+
+            if(window[instName]) {
+                window[instName].data.labels = labels;
+                window[instName].data.datasets[0].data = values;
+                window[instName].update();
+            } else {
+                window[instName] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: values,
+                            backgroundColor: barColor,
+                            borderRadius: 4,
+                            barThickness: 'flex',
+                            maxBarThickness: 30
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y', 
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: { padding: { right: 80 } },
+                        scales: {
+                            x: { beginAtZero: true, grace: '20%', grid: { display: false }, border: { display: false }, ticks: { display: false } }, 
+                            y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 10, weight: '500' } } }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            datalabels: {
+                                anchor: 'end',
+                                align: 'right',
+                                color: '#64748b',
+                                font: { weight: 'bold', size: 10 },
+                                formatter: (value) => {
+                                    if(total === 0) return '';
+                                    let pct = (value * 100 / total).toFixed(1) + "%";
+                                    return value + " (" + pct + ")";
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ================= TABEL BAWAH BNBA =================
+        function renderBnbaTable(rows) {
+            const tbody = document.getElementById('tableBodyBnba');
+            tbody.innerHTML = ''; 
+            
+            if(!rows || rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-5 py-10 text-center text-slate-400">Tidak ada mahasiswa yang cocok dengan filter.</td></tr>';
+                return;
+            }
+
+            rows.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition-colors";
+                const jenjang = row['Jenjang'] || '-';
+                
+                tr.innerHTML = `
+                    <td class="px-5 py-3 font-bold text-slate-800 whitespace-nowrap">${row['Nama'] || '-'}</td>
+                    <td class="px-5 py-3 whitespace-nowrap">${row['Universitas'] || '-'}</td>
+                    <td class="px-5 py-3 whitespace-nowrap">${row['Prodi'] || '-'}</td>
+                    <td class="px-5 py-3 text-center"><span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-medium">${row['Semester'] || '-'}</span></td>
+                    <td class="px-5 py-3 text-center font-bold text-slate-700">${row['IPK'] || '-'}</td>
+                    <td class="px-5 py-3 whitespace-nowrap text-center">
+                        <span class="px-3 py-1 text-[10px] rounded-full border font-bold bg-cyan-50 text-cyan-600 border-cyan-200">${jenjang}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ================= FUNGSI RENDER TABEL OVERVIEW =================
+
+        function renderSemesterTable(data) {
+            const tbody = document.getElementById('semesterTableBody');
+            tbody.innerHTML = '';
+            if(!data) return;
+            const keys = Object.keys(data).sort((a,b) => parseInt(a) - parseInt(b));
+            keys.forEach(k => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-[9px] border-b border-slate-50 font-bold text-slate-700">Semester ${k}</td>
+                        <td class="px-4 py-[9px] border-b border-slate-50 text-right font-medium">${data[k].toLocaleString()}</td>
+                    </tr>`;
+            });
+        }
+
+        function renderIpkTable(data) {
+            const tbody = document.getElementById('ipkTableBody');
+            tbody.innerHTML = '';
+            if(!data) return;
+            const order = ['< 2.75', '2.75-3.00', '3.01-3.25', '3.26-3.50', '3.51-3.75', '> 3.75'];
+            order.forEach(k => {
+                if (data[k] !== undefined) {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="px-3 py-3 border-b border-slate-50 font-bold"><span class="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs">${k}</span></td>
+                            <td class="px-3 py-3 border-b border-slate-50 text-right font-medium">${data[k].toLocaleString()}</td>
+                        </tr>`;
+                }
+            });
+        }
+
+        function renderJenjangTable(data) {
+            const tbody = document.getElementById('jenjangTableBody');
+            tbody.innerHTML = '';
+            if(!data) return;
+            Object.keys(data).forEach(k => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-4 py-3 border-b border-slate-50 font-bold text-slate-700">${k}</td>
+                        <td class="px-4 py-3 border-b border-slate-50 text-right font-medium">${data[k].toLocaleString()}</td>
+                    </tr>`;
+            });
+        }
+
+        function renderAsalSekolahTable(data) {
+            const tbody = document.getElementById('asalSekolahTableBody');
+            tbody.innerHTML = '';
+            if(!data || data.length === 0) return;
+            data.forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors">
+                        <td class="px-2 py-2 border-b border-slate-50 font-bold text-slate-700">${row.jenjang}</td>
+                        <td class="px-1 py-2 border-b border-slate-50 text-center font-medium text-emerald-600">${row.negeri.toLocaleString()}</td>
+                        <td class="px-1 py-2 border-b border-slate-50 text-center font-medium text-orange-600">${row.swasta.toLocaleString()}</td>
+                        <td class="px-2 py-2 border-b border-slate-50 text-right font-bold text-slate-800 bg-slate-50/50">${row.jumlah.toLocaleString()}</td>
+                    </tr>`;
+            });
+        }
+
+        // ================= FUNGSI RENDER CHART OVERVIEW =================
+
+        function renderPieChart(id, chartData, colors) {
+            if(!chartData) return;
+            const ctx = document.getElementById(id).getContext('2d');
+            const labels = Object.keys(chartData);
+            const values = Object.values(chartData);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 10
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '55%',
+                    layout: { padding: 10 },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: { size: 12, family: "'Inter', sans-serif" } } },
+                        datalabels: {
+                            color: '#fff',
+                            font: { weight: 'bold', size: 12 },
+                            formatter: (value, ctx) => {
+                                let sum = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                return (value * 100 / sum).toFixed(1) + "%";
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBarChart(id, chartData, barColor) {
+            if(!chartData) return;
+            const ctx = document.getElementById(id).getContext('2d');
+            const labels = Object.keys(chartData);
+            const values = Object.values(chartData);
+            const total = values.reduce((a, b) => a + b, 0);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: barColor,
+                        borderRadius: 6,
+                        barThickness: 'flex',
+                        maxBarThickness: 50
+                    }]
+                },
+                options: {
+                    indexAxis: 'y', 
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: { right: 80 } },
+                    scales: {
+                        x: { beginAtZero: true, grace: '20%', grid: { display: false }, border: { display: false }, ticks: { display: false } }, 
+                        y: { grid: { display: false }, border: { display: false }, ticks: { font: { size: 11, weight: '500' } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        datalabels: {
+                            anchor: 'end',
+                            align: 'right',
+                            color: '#64748b',
+                            font: { weight: 'bold', size: 11 },
+                            formatter: (value) => {
+                                let pct = (value * 100 / total).toFixed(1) + "%";
+                                return value + " (" + pct + ")";
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Start App
+        init();
+    </script>
+</body>
+</html>
