@@ -37,6 +37,19 @@
 </head>
 <body class="text-slate-800 antialiased h-screen flex overflow-hidden">
 
+    <div id="globalLoader" class="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-[100] flex items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="globalLoaderModal" class="bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center gap-4 transform scale-95 transition-transform duration-300 border border-slate-100">
+            <div class="relative w-12 h-12">
+                <div class="absolute inset-0 rounded-full border-[3px] border-slate-100"></div>
+                <div class="absolute inset-0 rounded-full border-[3px] border-brand-500 border-t-transparent animate-spin"></div>
+            </div>
+            <div class="text-center">
+                <h3 class="text-sm font-bold text-slate-800">Memproses Data</h3>
+                <p class="text-[10px] text-slate-500 mt-0.5">Mohon tunggu sebentar...</p>
+            </div>
+        </div>
+    </div>
+
     <aside class="w-72 bg-white border-r border-slate-200 hidden md:flex flex-col flex-shrink-0 z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div class="h-20 flex items-center px-8 border-b border-slate-100">
             <div class="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center mr-3 shadow-md shadow-brand-500/30">
@@ -427,9 +440,9 @@
                         </table>
                     </div>
                     <div class="px-5 py-3 border-t border-slate-100 flex justify-between items-center bg-slate-50">
-                        <button id="btnPrev" onclick="loadBnbaData(currentBnbaPage - 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600"><i class="fas fa-chevron-left mr-1"></i> Prev</button>
+                        <button id="btnPrev" onclick="changeBnbaPage(currentBnbaPage - 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600"><i class="fas fa-chevron-left mr-1"></i> Prev</button>
                         <span class="text-xs font-medium text-slate-500">Hal <span id="pageIndicator" class="font-bold text-slate-800">1</span> dari <span id="totalPages" class="font-bold text-slate-800">1</span></span>
-                        <button id="btnNext" onclick="loadBnbaData(currentBnbaPage + 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600">Next <i class="fas fa-chevron-right ml-1"></i></button>
+                        <button id="btnNext" onclick="changeBnbaPage(currentBnbaPage + 1)" class="px-3 py-1.5 text-xs font-bold bg-white border border-slate-200 rounded hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed text-slate-600">Next <i class="fas fa-chevron-right ml-1"></i></button>
                     </div>
                 </div>
             </div>
@@ -480,6 +493,34 @@
         window.filterState = {};
         for(let key in window.filterMap) window.filterState[key] = [];
 
+        // ================= GLOBAL LOADER LOGIC =================
+        window.showLoading = function() {
+            const loader = document.getElementById('globalLoader');
+            const modal = document.getElementById('globalLoaderModal');
+            loader.classList.remove('opacity-0', 'pointer-events-none');
+            modal.classList.remove('scale-95');
+            modal.classList.add('scale-100');
+        }
+
+        window.hideLoading = function() {
+            const loader = document.getElementById('globalLoader');
+            const modal = document.getElementById('globalLoaderModal');
+            loader.classList.add('opacity-0', 'pointer-events-none');
+            modal.classList.remove('scale-100');
+            modal.classList.add('scale-95');
+        }
+
+        window.executeWithLoading = function(callback) {
+            window.showLoading();
+            // Beri waktu 50ms agar browser sempat merender modal loading 
+            // sebelum main thread diblokir oleh proses data yang berat
+            setTimeout(() => {
+                callback();
+                window.hideLoading();
+            }, 50);
+        }
+        // =======================================================
+
         window.switchTab = function(tab) {
             document.getElementById('overviewSection').classList.add('hidden');
             document.getElementById('bnbaSection').classList.add('hidden');
@@ -514,8 +555,13 @@
         }
 
         async function init() {
-            fetchOverviewData();
-            await fetchAllDataLocal(); 
+            window.showLoading();
+            try {
+                // Await keduanya selesai baru loadingnya hilang
+                await Promise.all([fetchOverviewData(), fetchAllDataLocal()]);
+            } finally {
+                window.hideLoading();
+            }
         }
 
         async function fetchOverviewData() {
@@ -597,50 +643,64 @@
         }
 
         window.toggleOption = function(id, val) {
-            const arr = window.filterState[id];
-            const idx = arr.indexOf(val);
-            if(idx > -1) arr.splice(idx, 1);
-            else arr.push(val);
-            
-            updateCascadingDropdowns();
-            loadBnbaData(1);
+            window.executeWithLoading(() => {
+                const arr = window.filterState[id];
+                const idx = arr.indexOf(val);
+                if(idx > -1) arr.splice(idx, 1);
+                else arr.push(val);
+                
+                updateCascadingDropdowns();
+                loadBnbaData(1);
+            });
         }
 
         window.resetFilters = function() {
-            for(let key in window.filterState) window.filterState[key] = [];
-            window.sortColumn = 'Nama'; 
-            window.sortAsc = true;
-            document.querySelectorAll('th i.fas').forEach(el => {
-                if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+            window.executeWithLoading(() => {
+                for(let key in window.filterState) window.filterState[key] = [];
+                window.sortColumn = 'Nama'; 
+                window.sortAsc = true;
+                document.querySelectorAll('th i.fas').forEach(el => {
+                    if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+                });
+                document.getElementById('sort_Nama').className = 'fas fa-sort-up text-brand-500';
+                
+                updateCascadingDropdowns();
+                loadBnbaData(1);
             });
-            document.getElementById('sort_Nama').className = 'fas fa-sort-up text-brand-500';
-            
-            updateCascadingDropdowns();
-            loadBnbaData(1);
         }
 
         window.sortBy = function(col) {
-            if (window.sortColumn === col) {
-                window.sortAsc = !window.sortAsc; 
-            } else {
-                window.sortColumn = col;
-                window.sortAsc = true; 
-            }
-            
-            document.querySelectorAll('th i.fas').forEach(el => {
-                if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+            window.executeWithLoading(() => {
+                if (window.sortColumn === col) {
+                    window.sortAsc = !window.sortAsc; 
+                } else {
+                    window.sortColumn = col;
+                    window.sortAsc = true; 
+                }
+                
+                document.querySelectorAll('th i.fas').forEach(el => {
+                    if(el.id.startsWith('sort_')) el.className = 'fas fa-sort text-slate-300 group-hover:text-slate-400';
+                });
+                
+                const icon = document.getElementById('sort_' + col);
+                if(icon) icon.className = window.sortAsc ? 'fas fa-sort-up text-brand-500' : 'fas fa-sort-down text-brand-500';
+                
+                loadBnbaData(1); 
             });
-            
-            const icon = document.getElementById('sort_' + col);
-            if(icon) icon.className = window.sortAsc ? 'fas fa-sort-up text-brand-500' : 'fas fa-sort-down text-brand-500';
-            
-            loadBnbaData(1); 
         }
 
         // Sorting Untuk Tabel Prodi BNBA
         window.sortProdiSummary = function() {
-            window.prodiSummarySortAsc = !window.prodiSummarySortAsc;
-            window.renderProdiSummaryTable();
+            window.executeWithLoading(() => {
+                window.prodiSummarySortAsc = !window.prodiSummarySortAsc;
+                window.renderProdiSummaryTable();
+            });
+        }
+
+        window.changeBnbaPage = function(page) {
+            window.executeWithLoading(() => {
+                loadBnbaData(page);
+            });
         }
 
         async function fetchAllDataLocal() {
